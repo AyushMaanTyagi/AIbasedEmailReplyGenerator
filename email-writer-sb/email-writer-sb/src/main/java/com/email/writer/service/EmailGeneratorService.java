@@ -1,0 +1,89 @@
+package com.email.writer.service;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.util.Map;
+
+import com.email.writer.EmailRequest;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+
+@Service
+public class EmailGeneratorService {
+
+	
+	private  WebClient webclient ;
+	
+	public EmailGeneratorService(WebClient.Builder webclientBuilder) {
+		super();
+		this.webclient = webclientBuilder.build();
+	}
+
+	@Value("${gemini.api.key}")
+	private String GeminiApiKey;
+	
+	@Value("${gemini.api.url}")
+	private String GeminiUrl;
+	
+	
+	public String generateEmailReply(EmailRequest emailrequest)
+	{
+		String prompt = buildPrompt(emailrequest);
+		
+		//Formatting the request
+		
+		Map<String,Object> requestBody = Map.of(
+				"contents", new Object[]{
+				Map.of("parts",new Object[] {
+				Map.of("text",prompt)
+				})
+				}
+		);
+		
+		//Make Request and Receive Response
+		
+		String response = webclient.post().uri(GeminiUrl)
+										 .header("Content-Type","application/json")
+										 .header("X-goog-api-key", GeminiApiKey)
+										 .bodyValue(requestBody)
+										 .retrieve()
+										 .bodyToMono(String.class)
+										 .block();
+		
+		return extractResponseContent(response);
+	}
+
+	private String extractResponseContent(String response) {
+		try
+		{
+		 ObjectMapper mapper = new ObjectMapper();
+		 JsonNode rootnode = mapper.readTree(response);
+		 return rootnode.path("candidates").get(0)
+				 		.path("content")
+				 		.path("parts").get(0)
+				 		.path("text")
+				 		.asText();
+			
+		}
+		catch(Exception e)
+		{
+			return "Error processing Request "+e.getMessage();
+		}
+	
+	}
+
+	private String buildPrompt(EmailRequest emailrequest) {
+		
+		StringBuilder prompt = new StringBuilder();
+		prompt.append("Please Generate a Professional email Reply for the following Email-Content.Please Don't include a subject in this reply");
+		if(emailrequest.getTone() != null && !emailrequest.getTone().isEmpty())
+		{
+			prompt.append("Use a ").append(emailrequest.getTone()).append(" tone.");
+		}
+		prompt.append("\n Original Email:\n").append(emailrequest.getEmailContent());
+		return prompt.toString();
+	}
+}

@@ -1,0 +1,23 @@
+package com.email.writer.service;
+
+import org.springframework.stereotype.Service;
+
+import com.email.writer.EmailRequest;
+
+@Service
+public class EmailGeneratorService {
+
+	public String generateEmailReply(EmailRequest emailrequest)
+	{
+		String prompt = buildPrompt(emailrequest);
+		return "";
+	}
+
+	private String buildPrompt(EmailRequest emailrequest) {
+		
+		StringBuilder prompt = new StringBuilder();
+		prompt.append("Please Generate a Professional email Reply for the following Email-Content.Please Don't include a subject in this reply");
+		if(emailrequest.))
+		return null;
+	}
+}
